@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
-import org.opentripplanner.routing.bike_rental.GeofencingZone;
+import org.opentripplanner.routing.bike_rental.GeofencingZones.GeofencingZone;
 import org.opentripplanner.updater.bike_rental.datasources.params.BikeRentalDataSourceParameters;
 import org.opentripplanner.util.NonLocalizedString;
 import org.slf4j.Logger;

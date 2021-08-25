@@ -4,7 +4,7 @@ import java.util.List;
 
 import java.util.Set;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
-import org.opentripplanner.routing.bike_rental.GeofencingZone;
+import org.opentripplanner.routing.bike_rental.GeofencingZones;
 
 /**
  * TODO clarify thread safety.
@@ -23,6 +23,6 @@ public interface BikeRentalDataSource {
      */
     List<BikeRentalStation> getStations();
 
-    Set<GeofencingZone> getGeofencingZones();
+    GeofencingZones getGeofencingZones();
 
 }

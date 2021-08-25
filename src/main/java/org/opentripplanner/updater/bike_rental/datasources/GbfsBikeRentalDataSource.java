@@ -2,16 +2,14 @@ package org.opentripplanner.updater.bike_rental.datasources;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import java.util.Collections;
 import java.util.Optional;
-import org.geotools.geojson.GeoJSON;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.geojson.GeoJsonReader;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationUris;
-import org.opentripplanner.routing.bike_rental.GeofencingZone;
+import org.opentripplanner.routing.bike_rental.GeofencingZones;
+import org.opentripplanner.routing.bike_rental.GeofencingZones.GeofencingZone;
 import org.opentripplanner.updater.bike_rental.BikeRentalDataSource;
 import org.opentripplanner.updater.bike_rental.datasources.params.GbfsBikeRentalDataSourceParameters;
 import org.opentripplanner.util.HttpUtils;
@@ -124,7 +122,7 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
     }
 
     @Override
-    public Set<GeofencingZone> getGeofencingZones() {
+    public GeofencingZones getGeofencingZones() {
         return geofencingZonesSource.getGeofencingZones();
     }
 

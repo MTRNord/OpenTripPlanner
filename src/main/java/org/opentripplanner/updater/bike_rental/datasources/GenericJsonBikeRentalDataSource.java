@@ -7,7 +7,8 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
-import org.opentripplanner.routing.bike_rental.GeofencingZone;
+import org.opentripplanner.routing.bike_rental.GeofencingZones;
+import org.opentripplanner.routing.bike_rental.GeofencingZones.GeofencingZone;
 import org.opentripplanner.updater.bike_rental.BikeRentalDataSource;
 import org.opentripplanner.updater.bike_rental.datasources.params.BikeRentalDataSourceParameters;
 import org.opentripplanner.util.HttpUtils;
@@ -173,8 +174,8 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
     }
 
     @Override
-    public synchronized Set<GeofencingZone> getGeofencingZones() {
-        return geofencingZones;
+    public synchronized GeofencingZones getGeofencingZones() {
+        return new GeofencingZones(geofencingZones);
     }
 
     public String getUrl() {
