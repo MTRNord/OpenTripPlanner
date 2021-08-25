@@ -38,7 +38,7 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
     private final String jsonParsePath;
 
     List<BikeRentalStation> stations = new ArrayList<>();
-    private final Set<GeofencingZone> geofencingZones = new HashSet<>();
+    Set<GeofencingZone> geofencingZones = new HashSet<>();
 
     /**
      * Construct superclass
@@ -113,7 +113,7 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
     private void parseJSON(InputStream dataStream) throws IllegalArgumentException, IOException {
 
         List<BikeRentalStation> stations = new ArrayList<>();
-        List<GeofencingZone> geofencingZones = new ArrayList<>();
+        Set<GeofencingZone> geofencingZones = new HashSet<>();
 
         String rentalString = convertStreamToString(dataStream);
 
@@ -139,10 +139,12 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
                 continue;
             }
             makeStation(node).ifPresent(stations::add);
-            makeGeofencingZone(node).ifPresent(geofencingZones::add);
+            geofencingZones.addAll(makeGeofencingZone(node));
         }
+
         synchronized(this) {
             this.stations = stations;
+            this.geofencingZones = geofencingZones;
         }
     }
 
@@ -184,7 +186,7 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
     }
 
     public abstract Optional<BikeRentalStation> makeStation(JsonNode rentalStationNode);
-    public abstract Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode);
+    public abstract Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode);
 
     @Override
     public String toString() {

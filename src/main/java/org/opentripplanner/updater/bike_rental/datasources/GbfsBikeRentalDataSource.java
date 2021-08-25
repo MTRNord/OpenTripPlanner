@@ -2,8 +2,13 @@ package org.opentripplanner.updater.bike_rental.datasources;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import java.util.Collections;
 import java.util.Optional;
+import org.geotools.geojson.GeoJSON;
+import org.locationtech.jts.io.ParseException;
+import org.locationtech.jts.io.geojson.GeoJsonReader;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationUris;
 import org.opentripplanner.routing.bike_rental.GeofencingZone;
@@ -214,8 +219,8 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
 
         @Override
-        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-            return Optional.empty();
+        public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            return Collections.emptySet();
         }
 
     }
@@ -239,8 +244,8 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
 
         @Override
-        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-            return Optional.empty();
+        public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            return Collections.emptySet();
         }
     }
 
@@ -275,8 +280,8 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
 
         @Override
-        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-            return Optional.empty();
+        public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            return Collections.emptySet();
         }
 
 
@@ -286,7 +291,7 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
             extends GenericJsonBikeRentalDataSource<GbfsBikeRentalDataSourceParameters> {
 
         public GbfsGeofencingZonesDataSource(GbfsBikeRentalDataSourceParameters config) {
-            super(config, "data/geofencing_zones");
+            super(config, "data/geofencing_zones/features");
         }
 
         @Override
@@ -295,9 +300,18 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
 
         @Override
-        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-            System.out.println(geofencingZoneNode);
-            return Optional.empty();
+        public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+
+            var string = geofencingZoneNode.get("geometry").toString();
+            var reader = new GeoJsonReader();
+            try {
+                var geometry = reader.read(string);
+                return ImmutableSet.of(new GeofencingZone(geometry));
+            }
+            catch (ParseException e) {
+                LOG.error("Could not read GeoJSON from node retrieved from {}", getUrl(), e);
+                return Collections.emptySet();
+            }
         }
     }
 

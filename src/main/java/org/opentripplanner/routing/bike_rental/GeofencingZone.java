@@ -9,9 +9,9 @@ import org.opentripplanner.common.geometry.GeoJsonModule;
 
 public class GeofencingZone {
 
-    final MultiPolygon geometry;
+    final Geometry geometry;
 
-    public GeofencingZone(MultiPolygon geometry) { this.geometry = geometry; }
+    public GeofencingZone(Geometry geometry) { this.geometry = geometry; }
 
     boolean canDropOffVehicle(Coordinate c) {
         return true;

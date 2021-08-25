@@ -1,7 +1,9 @@
 package org.opentripplanner.updater.bike_rental.datasources;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.GeofencingZone;
 import org.opentripplanner.updater.bike_rental.datasources.params.BikeRentalDataSourceParameters;
@@ -61,9 +63,8 @@ class SmooveBikeRentalDataSource extends GenericJsonBikeRentalDataSource {
         }
         return Optional.of(station);
     }
-
     @Override
-    public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-        return Optional.empty();
+    public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+        return Collections.emptySet();
     }
 }

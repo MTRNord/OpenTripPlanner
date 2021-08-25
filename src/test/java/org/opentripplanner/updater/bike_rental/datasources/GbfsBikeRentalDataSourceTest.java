@@ -1,6 +1,6 @@
 package org.opentripplanner.updater.bike_rental.datasources;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
@@ -20,8 +20,8 @@ class GbfsBikeRentalDataSourceTest {
         );
         var source = new GbfsGeofencingZonesDataSource(params);
         source.update();
-        
+
         var zones = source.getGeofencingZones();
-        assertFalse(zones.isEmpty());
+        assertEquals(zones.size(), 243);
     }
 }

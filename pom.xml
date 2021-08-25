@@ -453,6 +453,13 @@
             <version>${geotools.version}</version>
         </dependency>
 
+        <!-- in order to parse the GeoJSON in GBFS geofencing zone files -->
+        <dependency>
+            <groupId>org.locationtech.jts.io</groupId>
+            <artifactId>jts-io-common</artifactId>
+            <version>1.18.1</version>
+        </dependency>
+
         <!-- TODO: this should be replaced by Jackson serialization -->
         <dependency>
             <groupId>de.grundid.opendatalab</groupId>
