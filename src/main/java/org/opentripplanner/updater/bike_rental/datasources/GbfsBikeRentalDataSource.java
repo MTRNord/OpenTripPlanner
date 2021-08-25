@@ -3,8 +3,10 @@ package org.opentripplanner.updater.bike_rental.datasources;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
+import java.util.Optional;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationUris;
+import org.opentripplanner.routing.bike_rental.GeofencingZone;
 import org.opentripplanner.updater.bike_rental.BikeRentalDataSource;
 import org.opentripplanner.updater.bike_rental.datasources.params.GbfsBikeRentalDataSourceParameters;
 import org.opentripplanner.util.HttpUtils;
@@ -43,6 +45,8 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
     // free_bike_status.json declared OPTIONAL by GBFS spec
     private final GbfsFloatingBikeDataSource floatingBikeSource;
 
+    private final GbfsGeofencingZonesDataSource geofencingZonesSource;
+
     private final String networkName;
 
     /** Some car rental systems and flex transit systems work exactly like bike rental, but with cars. */
@@ -55,6 +59,8 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         floatingBikeSource = OTPFeature.FloatingBike.isOn()
             ? new GbfsFloatingBikeDataSource(parameters)
             : null;
+
+        geofencingZonesSource = new GbfsGeofencingZonesDataSource(parameters);
 
         configureUrls(parameters.getUrl(), parameters.getHttpHeaders());
         this.networkName = parameters.getNetwork(DEFAULT_NETWORK_NAME);
@@ -112,10 +118,16 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         return stations;
     }
 
+    @Override
+    public Set<GeofencingZone> getGeofencingZones() {
+        return geofencingZonesSource.getGeofencingZones();
+    }
+
     private static class GbfsAutoDiscoveryDataSource {
         private String stationInformationUrl;
         private String stationStatusUrl;
         private String freeBikeStatusUrl;
+        private String geoFencingZonesUrl;
 
         public GbfsAutoDiscoveryDataSource(String autoDiscoveryUrl, Map<String, String> headers) {
 
@@ -140,6 +152,9 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
                             case "free_bike_status":
                                 freeBikeStatusUrl = url;
                                 break;
+                            case "geofencing_zones":
+                                geoFencingZonesUrl = url;
+                                break;
                         }
                     }
                 }
@@ -152,6 +167,7 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
                 stationInformationUrl = baseUrl + "station_information.json";
                 stationStatusUrl = baseUrl + "station_status.json";
                 freeBikeStatusUrl = baseUrl + "free_bike_status.json";
+                geoFencingZonesUrl = baseUrl + "geofencing_zones.json";
             }
         }
 
@@ -172,12 +188,12 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
 
     class GbfsStationDataSource extends GenericJsonBikeRentalDataSource<GbfsBikeRentalDataSourceParameters> {
 
-        public GbfsStationDataSource (GbfsBikeRentalDataSourceParameters config) {
+        public GbfsStationDataSource(GbfsBikeRentalDataSourceParameters config) {
             super(config, "data/stations");
         }
 
         @Override
-        public BikeRentalStation makeStation(JsonNode stationNode) {
+        public Optional<BikeRentalStation> makeStation(JsonNode stationNode) {
             BikeRentalStation brstation = new BikeRentalStation();
             brstation.id = stationNode.path("station_id").asText();
             brstation.x = stationNode.path("lon").asDouble();
@@ -194,37 +210,50 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
                 brstation.rentalUris = new BikeRentalStationUris(androidUri, iosUri, webUri);
             }
 
-            return brstation;
+            return Optional.of(brstation);
         }
+
+        @Override
+        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            return Optional.empty();
+        }
+
     }
 
-    class GbfsStationStatusDataSource extends GenericJsonBikeRentalDataSource<GbfsBikeRentalDataSourceParameters> {
+    class GbfsStationStatusDataSource
+            extends GenericJsonBikeRentalDataSource<GbfsBikeRentalDataSourceParameters> {
 
-        public GbfsStationStatusDataSource (GbfsBikeRentalDataSourceParameters config) {
+        public GbfsStationStatusDataSource(GbfsBikeRentalDataSourceParameters config) {
             super(config, "data/stations");
         }
 
         @Override
-        public BikeRentalStation makeStation(JsonNode stationNode) {
+        public Optional<BikeRentalStation> makeStation(JsonNode stationNode) {
             BikeRentalStation brstation = new BikeRentalStation();
             brstation.id = stationNode.path("station_id").asText();
             brstation.bikesAvailable = stationNode.path("num_bikes_available").asInt();
             brstation.spacesAvailable = stationNode.path("num_docks_available").asInt();
             brstation.isKeepingBicycleRentalAtDestinationAllowed = config.allowKeepingRentedBicycleAtDestination();
             brstation.isCarStation = routeAsCar;
-            return brstation;
+            return Optional.of(brstation);
+        }
+
+        @Override
+        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            return Optional.empty();
         }
     }
 
     // TODO This is not currently safe to use. See javadoc on GbfsBikeRentalDataSource class.
-    class GbfsFloatingBikeDataSource extends GenericJsonBikeRentalDataSource<GbfsBikeRentalDataSourceParameters> {
+    class GbfsFloatingBikeDataSource
+            extends GenericJsonBikeRentalDataSource<GbfsBikeRentalDataSourceParameters> {
 
-        public GbfsFloatingBikeDataSource (GbfsBikeRentalDataSourceParameters config) {
+        public GbfsFloatingBikeDataSource(GbfsBikeRentalDataSourceParameters config) {
             super(config, "data/bikes");
         }
 
         @Override
-        public BikeRentalStation makeStation(JsonNode stationNode) {
+        public Optional<BikeRentalStation> makeStation(JsonNode stationNode) {
             if (stationNode.path("station_id").asText().isBlank() &&
                     stationNode.has("lon") &&
                     stationNode.has("lat")
@@ -239,10 +268,36 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
                 brstation.allowDropoff = false;
                 brstation.isFloatingBike = true;
                 brstation.isCarStation = routeAsCar;
-                return brstation;
+                return Optional.of(brstation);
             } else {
-                return null;
+                return Optional.empty();
             }
+        }
+
+        @Override
+        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            return Optional.empty();
+        }
+
+
+    }
+
+    static class GbfsGeofencingZonesDataSource
+            extends GenericJsonBikeRentalDataSource<GbfsBikeRentalDataSourceParameters> {
+
+        public GbfsGeofencingZonesDataSource(GbfsBikeRentalDataSourceParameters config) {
+            super(config, "data/geofencing_zones");
+        }
+
+        @Override
+        public Optional<BikeRentalStation> makeStation(JsonNode rentalStationNode) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            System.out.println(geofencingZoneNode);
+            return Optional.empty();
         }
     }
 

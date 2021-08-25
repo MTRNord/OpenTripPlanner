@@ -6,7 +6,7 @@ import org.opentripplanner.updater.bike_rental.datasources.params.GbfsBikeRental
 
 public class BikeRentalDataSourceFactory {
 
-    public static BikeRentalDataSource create(BikeRentalDataSourceParameters source) {
+  public static BikeRentalDataSource create(BikeRentalDataSourceParameters source) {
         switch (source.getSourceType()) {
             // There used to be a lot more updaters and corresponding config variables here, but since
             // the industry has largely moved towards GBFS, they were removed.

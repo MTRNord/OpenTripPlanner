@@ -1,8 +1,9 @@
 package org.opentripplanner.updater.bike_rental.datasources;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Optional;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
-import org.opentripplanner.updater.bike_rental.BikeRentalDataSource;
+import org.opentripplanner.routing.bike_rental.GeofencingZone;
 import org.opentripplanner.updater.bike_rental.datasources.params.BikeRentalDataSourceParameters;
 import org.opentripplanner.util.NonLocalizedString;
 import org.slf4j.Logger;
@@ -10,7 +11,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of a BikeRentalDataSource for the Smoove GIR SabiWeb used in Helsinki.
- * @see BikeRentalDataSource
  */
 class SmooveBikeRentalDataSource extends GenericJsonBikeRentalDataSource {
 
@@ -38,7 +38,8 @@ class SmooveBikeRentalDataSource extends GenericJsonBikeRentalDataSource {
      * }
      * </pre>
      */
-    public BikeRentalStation makeStation(JsonNode node) {
+    @Override
+    public Optional<BikeRentalStation> makeStation(JsonNode node) {
         BikeRentalStation station = new BikeRentalStation();
         station.id = node.path("name").asText().split("\\s", 2)[0];
         station.name = new NonLocalizedString(node.path("name").asText().split("\\s", 2)[1]);
@@ -49,7 +50,7 @@ class SmooveBikeRentalDataSource extends GenericJsonBikeRentalDataSource {
         } catch (NumberFormatException e) {
             // E.g. coordinates is empty
             log.warn("Error parsing bike rental station " + station.id, e);
-            return null;
+            return Optional.empty();
         }
         if (!node.path("operative").asText().equals("true")) {
             station.bikesAvailable = 0;
@@ -58,6 +59,11 @@ class SmooveBikeRentalDataSource extends GenericJsonBikeRentalDataSource {
             station.bikesAvailable = node.path("avl_bikes").asInt();
             station.spacesAvailable = node.path("free_slots").asInt();
         }
-        return station;
+        return Optional.of(station);
+    }
+
+    @Override
+    public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+        return Optional.empty();
     }
 }

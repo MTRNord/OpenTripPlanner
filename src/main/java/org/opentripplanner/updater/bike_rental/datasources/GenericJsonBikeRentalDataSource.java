@@ -3,7 +3,11 @@ package org.opentripplanner.updater.bike_rental.datasources;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
+import org.opentripplanner.routing.bike_rental.GeofencingZone;
 import org.opentripplanner.updater.bike_rental.BikeRentalDataSource;
 import org.opentripplanner.updater.bike_rental.datasources.params.BikeRentalDataSourceParameters;
 import org.opentripplanner.util.HttpUtils;
@@ -34,6 +38,7 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
     private final String jsonParsePath;
 
     List<BikeRentalStation> stations = new ArrayList<>();
+    private final Set<GeofencingZone> geofencingZones = new HashSet<>();
 
     /**
      * Construct superclass
@@ -107,7 +112,8 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
 
     private void parseJSON(InputStream dataStream) throws IllegalArgumentException, IOException {
 
-        ArrayList<BikeRentalStation> out = new ArrayList<>();
+        List<BikeRentalStation> stations = new ArrayList<>();
+        List<GeofencingZone> geofencingZones = new ArrayList<>();
 
         String rentalString = convertStreamToString(dataStream);
 
@@ -132,13 +138,11 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
             if (node == null) {
                 continue;
             }
-            BikeRentalStation brstation = makeStation(node);
-            if (brstation != null) {
-                out.add(brstation);
-            }
+            makeStation(node).ifPresent(stations::add);
+            makeGeofencingZone(node).ifPresent(geofencingZones::add);
         }
         synchronized(this) {
-            stations = out;
+            this.stations = stations;
         }
     }
 
@@ -166,6 +170,11 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
         return stations;
     }
 
+    @Override
+    public synchronized Set<GeofencingZone> getGeofencingZones() {
+        return geofencingZones;
+    }
+
     public String getUrl() {
         return url;
     }
@@ -174,7 +183,8 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
     	this.url = url;
     }
 
-    public abstract BikeRentalStation makeStation(JsonNode rentalStationNode);
+    public abstract Optional<BikeRentalStation> makeStation(JsonNode rentalStationNode);
+    public abstract Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode);
 
     @Override
     public String toString() {
