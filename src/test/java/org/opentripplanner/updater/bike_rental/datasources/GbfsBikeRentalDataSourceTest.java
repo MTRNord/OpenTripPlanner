@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
+import org.opentripplanner.routing.bike_rental.GeofencingZones;
 import org.opentripplanner.updater.bike_rental.datasources.GbfsBikeRentalDataSource.GbfsGeofencingZonesDataSource;
 import org.opentripplanner.updater.bike_rental.datasources.params.GbfsBikeRentalDataSourceParameters;
 
@@ -37,5 +38,11 @@ class GbfsBikeRentalDataSourceTest {
 
         // dropping off in Frogner Park (inside business area but inside a special exclusion zone) should not be allowed
         assertFalse(zones.canDropOffVehicle(new Coordinate( 10.7036, 59.9277)));
+    }
+
+    @Test
+    void emptyZones(){
+        var zones = new GeofencingZones(Collections.emptySet());
+        zones.canDropOffVehicle(new Coordinate(11.1024, 59.2820));
     }
 }

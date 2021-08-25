@@ -18,16 +18,14 @@ public class GeofencingZones {
         // if there are no rules, this means that you can drop off the bike anywhere (in the world!)
         if (isEmpty()) {return true;}
         else {
-            return zones.stream().anyMatch(zone -> zone.canDropOffVehicle(point)) &&
-                    zones.stream().noneMatch(zone -> zone.mayNotDropOffVehicle(point));
+            return zones.stream().anyMatch(zone -> zone.dropOffAllowed(point)) &&
+                    zones.stream().noneMatch(zone -> zone.dropOffProhibited(point));
         }
     }
 
     public int size() {return zones.size();}
 
-
     public boolean isEmpty() {return zones.isEmpty();}
-
 
     public static class GeofencingZone {
 
@@ -39,11 +37,11 @@ public class GeofencingZones {
             this.dropOffAllowed = dropOffAllowed;
         }
 
-        boolean canDropOffVehicle(Point p) {
+        boolean dropOffAllowed(Point p) {
             return geometry.contains(p) && dropOffAllowed;
         }
 
-        boolean mayNotDropOffVehicle(Point p) {
+        boolean dropOffProhibited(Point p) {
             return geometry.contains(p) && !dropOffAllowed;
         }
     }
