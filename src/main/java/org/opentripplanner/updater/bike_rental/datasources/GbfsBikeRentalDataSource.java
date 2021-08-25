@@ -219,8 +219,8 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
 
         @Override
-        public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-            return Collections.emptySet();
+        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            return Optional.empty();
         }
 
     }
@@ -244,8 +244,8 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
 
         @Override
-        public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-            return Collections.emptySet();
+        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            return Optional.empty();
         }
     }
 
@@ -280,8 +280,8 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
 
         @Override
-        public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-            return Collections.emptySet();
+        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+            return Optional.empty();
         }
 
 
@@ -300,17 +300,17 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
 
         @Override
-        public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
 
             var string = geofencingZoneNode.get("geometry").toString();
             var reader = new GeoJsonReader();
             try {
                 var geometry = reader.read(string);
-                return ImmutableSet.of(new GeofencingZone(geometry));
+                return Optional.of(new GeofencingZone(geometry));
             }
             catch (ParseException e) {
                 LOG.error("Could not read GeoJSON from node retrieved from {}", getUrl(), e);
-                return Collections.emptySet();
+                return Optional.empty();
             }
         }
     }

@@ -139,7 +139,7 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
                 continue;
             }
             makeStation(node).ifPresent(stations::add);
-            geofencingZones.addAll(makeGeofencingZone(node));
+            makeGeofencingZone(node).ifPresent(geofencingZones::add);
         }
 
         synchronized(this) {
@@ -186,7 +186,7 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
     }
 
     public abstract Optional<BikeRentalStation> makeStation(JsonNode rentalStationNode);
-    public abstract Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode);
+    public abstract Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode);
 
     @Override
     public String toString() {

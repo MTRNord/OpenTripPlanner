@@ -64,7 +64,7 @@ class SmooveBikeRentalDataSource extends GenericJsonBikeRentalDataSource {
         return Optional.of(station);
     }
     @Override
-    public Set<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-        return Collections.emptySet();
+    public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
+        return Optional.empty();
     }
 }
