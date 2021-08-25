@@ -7,6 +7,7 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 
 public class GeofencingZones {
+
     private final Set<GeofencingZone> zones;
     private final GeometryFactory geometryFactory = new GeometryFactory();
 
@@ -14,19 +15,36 @@ public class GeofencingZones {
 
     public boolean canDropOffVehicle(Coordinate c) {
         var point = geometryFactory.createPoint(c);
-        return zones.stream().anyMatch(zone -> zone.canDropOffVehicle(point));
-    };
+        // if there are no rules, this means that you can drop off the bike anywhere (in the world!)
+        if (isEmpty()) {return true;}
+        else {
+            return zones.stream().anyMatch(zone -> zone.canDropOffVehicle(point)) &&
+                    zones.stream().noneMatch(zone -> zone.mayNotDropOffVehicle(point));
+        }
+    }
 
-    public int size() { return zones.size(); };
+    public int size() {return zones.size();}
+
+
+    public boolean isEmpty() {return zones.isEmpty();}
+
 
     public static class GeofencingZone {
 
         final Geometry geometry;
+        final boolean dropOffAllowed;
 
-        public GeofencingZone(Geometry geometry) { this.geometry = geometry; }
+        public GeofencingZone(Geometry geometry, boolean dropOffAllowed) {
+            this.geometry = geometry;
+            this.dropOffAllowed = dropOffAllowed;
+        }
 
         boolean canDropOffVehicle(Point p) {
-            return geometry.contains(p);
+            return geometry.contains(p) && dropOffAllowed;
+        }
+
+        boolean mayNotDropOffVehicle(Point p) {
+            return geometry.contains(p) && !dropOffAllowed;
         }
     }
 }

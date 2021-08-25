@@ -298,16 +298,17 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
 
         @Override
-        public Optional<GeofencingZone> makeGeofencingZone(JsonNode geofencingZoneNode) {
-
-            var string = geofencingZoneNode.get("geometry").toString();
-            var reader = new GeoJsonReader();
+        public Optional<GeofencingZone> makeGeofencingZone(JsonNode rootNode) {
             try {
+                var dropOffAllowed = rootNode.get("properties").get("rules").get(0).get("ride_allowed").asBoolean();
+                // sadly in order to use the JTS GeoJSON parse we have to convert back to a string
+                var string = rootNode.get("geometry").toString();
+                var reader = new GeoJsonReader();
                 var geometry = reader.read(string);
-                return Optional.of(new GeofencingZone(geometry));
+                return Optional.of(new GeofencingZone(geometry, dropOffAllowed));
             }
-            catch (ParseException e) {
-                LOG.error("Could not read GeoJSON from node retrieved from {}", getUrl(), e);
+            catch (ParseException | NullPointerException e) {
+                LOG.error("Could not read geofencing information from node retrieved from {}", getUrl(), e);
                 return Optional.empty();
             }
         }
