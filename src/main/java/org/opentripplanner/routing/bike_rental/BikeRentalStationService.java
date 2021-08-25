@@ -11,12 +11,16 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.opentripplanner.routing.bike_park.BikePark;
 
+// TODO: this should probably be renamed to BikeRentalService
 public class BikeRentalStationService implements Serializable {
     private static final long serialVersionUID = -1288992939159246764L;
 
     private Set<BikeRentalStation> bikeRentalStations = new HashSet<>();
 
     private Set<BikePark> bikeParks = new HashSet<>();
+
+    // if no geofencing zones are provided free-floating bikes can be dropped off anywhere (globally!)
+    private GeofencingZones geofencingZones = new GeofencingZones();
 
     public Collection<BikeRentalStation> getBikeRentalStations() {
         return bikeRentalStations;

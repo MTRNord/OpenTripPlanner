@@ -4,6 +4,7 @@ import org.opentripplanner.graph_builder.linking.LinkingDirection;
 import org.opentripplanner.graph_builder.linking.VertexLinker;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationService;
+import org.opentripplanner.routing.bike_rental.GeofencingZones;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.TraverseModeSet;
 import org.opentripplanner.routing.edgetype.BikeRentalEdge;
@@ -85,9 +86,10 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
             return;
         }
         List<BikeRentalStation> stations = source.getStations();
+        GeofencingZones geofencingZones = source.getGeofencingZones();
 
         // Create graph writer runnable to apply these stations to the graph
-        BikeRentalGraphWriterRunnable graphWriterRunnable = new BikeRentalGraphWriterRunnable(stations);
+        BikeRentalGraphWriterRunnable graphWriterRunnable = new BikeRentalGraphWriterRunnable(stations, geofencingZones);
         updaterManager.execute(graphWriterRunnable);
     }
 
@@ -98,9 +100,11 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
     private class BikeRentalGraphWriterRunnable implements GraphWriterRunnable {
 
         private final List<BikeRentalStation> stations;
+        private final GeofencingZones geofencingZones;
 
-        public BikeRentalGraphWriterRunnable(List<BikeRentalStation> stations) {
+        public BikeRentalGraphWriterRunnable(List<BikeRentalStation> stations, GeofencingZones geofencingZones) {
             this.stations = stations;
+            this.geofencingZones = geofencingZones;
         }
 
 		@Override
@@ -156,7 +160,10 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
                 tempEdgesByStation.get(station).disposeEdges();
                 tempEdgesByStation.remove(station);
             }
+
         }
+        
+
     }
 
 }
