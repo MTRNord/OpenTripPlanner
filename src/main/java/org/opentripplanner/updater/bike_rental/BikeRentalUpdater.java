@@ -1,9 +1,11 @@
 package org.opentripplanner.updater.bike_rental;
 
+import java.util.stream.Collectors;
 import org.opentripplanner.graph_builder.linking.LinkingDirection;
 import org.opentripplanner.graph_builder.linking.VertexLinker;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationService;
+import org.opentripplanner.routing.bike_rental.GeofencingInformation;
 import org.opentripplanner.routing.bike_rental.GeofencingZones;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.TraverseModeSet;
@@ -86,7 +88,7 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
             return;
         }
         List<BikeRentalStation> stations = source.getStations();
-        GeofencingZones geofencingZones = source.getGeofencingZones();
+        var geofencingZones = source.getGeofencingZones();
 
         // Create graph writer runnable to apply these stations to the graph
         BikeRentalGraphWriterRunnable graphWriterRunnable = new BikeRentalGraphWriterRunnable(stations, geofencingZones);
@@ -100,9 +102,9 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
     private class BikeRentalGraphWriterRunnable implements GraphWriterRunnable {
 
         private final List<BikeRentalStation> stations;
-        private final GeofencingZones geofencingZones;
+        private final Map<String, GeofencingZones> geofencingZones;
 
-        public BikeRentalGraphWriterRunnable(List<BikeRentalStation> stations, GeofencingZones geofencingZones) {
+        public BikeRentalGraphWriterRunnable(List<BikeRentalStation> stations, Map<String, GeofencingZones> geofencingZones) {
             this.stations = stations;
             this.geofencingZones = geofencingZones;
         }
@@ -161,9 +163,30 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
                 tempEdgesByStation.remove(station);
             }
 
-        }
-        
+            geofencingZones.forEach((networkId, zones) -> {
 
+                var edgesInBusinessArea =
+                        graph.getStreetIndex().getEdgesForEnvelope(zones.getEnvelope());
+                var permittedDropOffEdges = edgesInBusinessArea.stream()
+                        .filter(edge -> zones.canDropOffVehicle(edge.getGeometry()))
+                        .collect(
+                                Collectors.toSet());
+
+                var geofencingInformation =
+                        new GeofencingInformation(networkId, permittedDropOffEdges);
+
+                service.setGeofencingInformation(geofencingInformation);
+
+            });
+        }
+
+
+    }
+
+
+    @Override
+    public String toString() {
+        return "BikeRentalUpdater( "+ source +")";
     }
 
 }

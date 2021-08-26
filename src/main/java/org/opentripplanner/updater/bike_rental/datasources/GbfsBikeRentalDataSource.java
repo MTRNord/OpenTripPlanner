@@ -1,5 +1,7 @@
 package org.opentripplanner.updater.bike_rental.datasources;
 
+import static org.opentripplanner.updater.bike_rental.datasources.GenericJsonBikeRentalDataSource.DEFAULT_NETWORK_NAME;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
@@ -37,7 +39,7 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
 
     private static final Logger LOG = LoggerFactory.getLogger(GbfsBikeRentalDataSource.class);
 
-    private static final String DEFAULT_NETWORK_NAME = "GBFS";
+    private final String baseUrl;
 
     // station_information.json required by GBFS spec
     private final GbfsStationDataSource stationInformationSource;
@@ -67,6 +69,7 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
 
         configureUrls(parameters.getUrl(), parameters.getHttpHeaders());
         this.networkName = parameters.getNetwork(DEFAULT_NETWORK_NAME);
+        this.baseUrl = parameters.getUrl();
     }
 
     private void configureUrls(String url, Map<String, String> headers) {
@@ -122,7 +125,7 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
     }
 
     @Override
-    public GeofencingZones getGeofencingZones() {
+    public Map<String, GeofencingZones> getGeofencingZones() {
         return geofencingZonesSource.getGeofencingZones();
     }
 
@@ -314,4 +317,12 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         }
     }
 
+    @Override
+    public String toString() {
+        return "GbfsBikeRentalDataSource{" +
+                "url='" + baseUrl + '\'' +
+                ", networkName='" + networkName + '\'' +
+                ", routeAsCar=" + routeAsCar +
+                '}';
+    }
 }

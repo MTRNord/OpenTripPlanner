@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.opentripplanner.routing.algorithm.astar.NegativeWeightException;
 import org.opentripplanner.routing.api.request.RoutingRequest;
+import org.opentripplanner.routing.bike_rental.BikeRentalStationService;
 import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Vertex;
@@ -296,12 +297,24 @@ public class State implements Cloneable {
 
     public boolean bikeRentalIsFinished() {
         return stateData.bikeRentalState == BikeRentalState.HAVE_RENTED
-                || stateData.bikeRentalState == BikeRentalState.RENTING_FLOATING
+                || canDropOffFloatingBikeRental()
                 || (
                 getOptions().allowKeepingRentedBicycleAtDestination
                         && stateData.mayKeepRentedBicycleAtDestination
                         && stateData.bikeRentalState == BikeRentalState.RENTING_FROM_STATION
         );
+    }
+
+    private boolean canDropOffFloatingBikeRental() {
+        if (stateData.bikeRentalState == BikeRentalState.RENTING_FLOATING) {
+            var graph = stateData.opt.rctx.graph;
+            var service = graph.getService(BikeRentalStationService.class);
+            return stateData.bikeRentalNetworks.stream()
+                    .anyMatch(network -> service.canDropOffVehicle(network, backEdge));
+        }
+        else {
+            return false;
+        }
     }
 
     public boolean bikeRentalNotStarted() {

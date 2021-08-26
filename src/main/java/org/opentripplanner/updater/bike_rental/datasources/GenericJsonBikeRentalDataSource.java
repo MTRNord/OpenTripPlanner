@@ -38,6 +38,8 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
 
     private final String jsonParsePath;
 
+    protected static final String DEFAULT_NETWORK_NAME = "GBFS";
+
     List<BikeRentalStation> stations = new ArrayList<>();
     Set<GeofencingZone> geofencingZones = new HashSet<>();
 
@@ -174,8 +176,8 @@ abstract class GenericJsonBikeRentalDataSource<T extends BikeRentalDataSourcePar
     }
 
     @Override
-    public synchronized GeofencingZones getGeofencingZones() {
-        return new GeofencingZones(geofencingZones);
+    public synchronized Map<String, GeofencingZones> getGeofencingZones() {
+        return Map.of(config.getNetwork(DEFAULT_NETWORK_NAME), new GeofencingZones(geofencingZones));
     }
 
     public String getUrl() {

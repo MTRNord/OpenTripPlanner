@@ -2,14 +2,17 @@ package org.opentripplanner.routing.bike_rental;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.opentripplanner.routing.bike_park.BikePark;
+import org.opentripplanner.routing.graph.Edge;
 
 // TODO: this should probably be renamed to BikeRentalService
 public class BikeRentalStationService implements Serializable {
@@ -19,8 +22,7 @@ public class BikeRentalStationService implements Serializable {
 
     private Set<BikePark> bikeParks = new HashSet<>();
 
-    // if no geofencing zones are provided free-floating bikes can be dropped off anywhere (globally!)
-    private GeofencingZones geofencingZones = new GeofencingZones();
+    private final Map<String, GeofencingInformation> geofencing = Collections.emptyMap();
 
     public Collection<BikeRentalStation> getBikeRentalStations() {
         return bikeRentalStations;
@@ -48,6 +50,17 @@ public class BikeRentalStationService implements Serializable {
 
     public void removeBikePark(BikePark bikePark) {
         bikeParks.remove(bikePark);
+    }
+
+
+    public boolean canDropOffVehicle(String network, Edge edge) {
+        return Optional.ofNullable(geofencing.get(network))
+                .map(geofencing -> geofencing.canDropOffVehicle(edge))
+                .orElse(true);
+    }
+
+    public void setGeofencingInformation(GeofencingInformation geofencingInformation) {
+        geofencing.put(geofencingInformation.getNetworkId(), geofencingInformation);
     }
 
     /**

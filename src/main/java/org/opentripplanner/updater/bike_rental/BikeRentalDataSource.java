@@ -2,7 +2,7 @@ package org.opentripplanner.updater.bike_rental;
 
 import java.util.List;
 
-import java.util.Set;
+import java.util.Map;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.GeofencingZones;
 
@@ -23,6 +23,6 @@ public interface BikeRentalDataSource {
      */
     List<BikeRentalStation> getStations();
 
-    GeofencingZones getGeofencingZones();
+    Map<String, GeofencingZones> getGeofencingZones();
 
 }
