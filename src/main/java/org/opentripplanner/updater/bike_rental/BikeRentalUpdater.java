@@ -1,6 +1,16 @@
 package org.opentripplanner.updater.bike_rental;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
+import org.opentripplanner.graph_builder.linking.DisposableEdgeCollection;
 import org.opentripplanner.graph_builder.linking.LinkingDirection;
 import org.opentripplanner.graph_builder.linking.VertexLinker;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
@@ -11,7 +21,6 @@ import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.TraverseModeSet;
 import org.opentripplanner.routing.edgetype.BikeRentalEdge;
 import org.opentripplanner.routing.edgetype.StreetBikeRentalLink;
-import org.opentripplanner.graph_builder.linking.DisposableEdgeCollection;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.vertextype.BikeRentalStationVertex;
 import org.opentripplanner.updater.GraphUpdaterManager;
@@ -20,15 +29,6 @@ import org.opentripplanner.updater.PollingGraphUpdater;
 import org.opentripplanner.updater.bike_rental.datasources.BikeRentalDataSourceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 /**
  * Dynamic bike-rental station updater which updates the Graph with bike rental stations from one BikeRentalDataSource.
@@ -163,21 +163,37 @@ public class BikeRentalUpdater extends PollingGraphUpdater {
                 tempEdgesByStation.remove(station);
             }
 
-            geofencingZones.forEach((networkId, zones) -> {
+            updateGeofencingZones(graph);
+        }
 
-                var edgesInBusinessArea =
-                        graph.getStreetIndex().getEdgesForEnvelope(zones.getEnvelope());
-                var permittedDropOffEdges = edgesInBusinessArea.stream()
-                        .filter(edge -> zones.canDropOffVehicle(edge.getGeometry()))
-                        .collect(
-                                Collectors.toSet());
+        private void updateGeofencingZones(Graph graph) {
+            geofencingZones.entrySet()
+                    .stream()
+                    .filter(kv -> kv.getValue().nonEmpty())
+                    .forEach(kv -> {
+                        var start = System.currentTimeMillis();
+                        var networkId = kv.getKey();
+                        var zones = kv.getValue();
+                        var edgesInBusinessArea =
+                                graph.getStreetIndex().getEdgesForEnvelope(zones.getEnvelope());
+                        var permittedDropOffEdges = edgesInBusinessArea.stream()
+                                .filter(edge ->
+                                        // there appear to be edges where the geometries are null, these are filtered out
+                                        Optional.ofNullable(edge.getGeometry())
+                                                .map(zones::canDropOffVehicle)
+                                                .orElse(false)
+                                )
+                                .collect(Collectors.toSet());
 
-                var geofencingInformation =
-                        new GeofencingInformation(networkId, permittedDropOffEdges);
+                        var geofencingInformation =
+                                new GeofencingInformation(networkId, permittedDropOffEdges);
 
-                service.setGeofencingInformation(geofencingInformation);
+                        service.setGeofencingInformation(geofencingInformation);
 
-            });
+                        var end = System.currentTimeMillis();
+                        var duration = (end - start) / 1000;
+                        LOG.error("Updating geofencing zones for network {} took {} seconds", networkId, duration);
+                    });
         }
 
 

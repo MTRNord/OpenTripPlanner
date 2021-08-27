@@ -79,6 +79,7 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         if (OTPFeature.FloatingBike.isOn()) {
             floatingBikeSource.setUrl(gbfsAutoDiscoveryDataSource.freeBikeStatusUrl);
         }
+        geofencingZonesSource.setUrl(gbfsAutoDiscoveryDataSource.geoFencingZonesUrl);
     }
 
     @Override
@@ -90,6 +91,9 @@ class GbfsBikeRentalDataSource implements BikeRentalDataSource {
         if (OTPFeature.FloatingBike.isOn()) {
             updatesFound |= floatingBikeSource.update();
         }
+
+        // geofencing is also optional
+        updatesFound |= geofencingZonesSource.update();
         // Return true if ANY of the sub-updaters found any updates.
         return updatesFound;
     }

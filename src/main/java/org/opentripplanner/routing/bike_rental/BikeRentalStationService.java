@@ -3,6 +3,7 @@ package org.opentripplanner.routing.bike_rental;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +23,7 @@ public class BikeRentalStationService implements Serializable {
 
     private Set<BikePark> bikeParks = new HashSet<>();
 
-    private final Map<String, GeofencingInformation> geofencing = Collections.emptyMap();
+    private final Map<String, GeofencingInformation> geofencing = new HashMap<>();
 
     public Collection<BikeRentalStation> getBikeRentalStations() {
         return bikeRentalStations;

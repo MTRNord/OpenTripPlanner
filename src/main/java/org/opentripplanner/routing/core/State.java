@@ -9,6 +9,7 @@ import org.opentripplanner.routing.algorithm.astar.NegativeWeightException;
 import org.opentripplanner.routing.api.request.RoutingRequest;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationService;
 import org.opentripplanner.routing.edgetype.StreetEdge;
+import org.opentripplanner.routing.edgetype.TemporaryEdge;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.vertextype.BikeRentalStationVertex;
@@ -309,8 +310,15 @@ public class State implements Cloneable {
         if (stateData.bikeRentalState == BikeRentalState.RENTING_FLOATING) {
             var graph = stateData.opt.rctx.graph;
             var service = graph.getService(BikeRentalStationService.class);
+
+            State stateToInspect = this;
+            while(stateToInspect.getBackEdge() instanceof TemporaryEdge) {
+                stateToInspect = stateToInspect.getBackState();
+            }
+
+            final State finalStateToInspect = stateToInspect; // needed because of the lambda use
             return stateData.bikeRentalNetworks.stream()
-                    .anyMatch(network -> service.canDropOffVehicle(network, backEdge));
+                    .anyMatch(network -> service.canDropOffVehicle(network, finalStateToInspect.backEdge));
         }
         else {
             return false;
