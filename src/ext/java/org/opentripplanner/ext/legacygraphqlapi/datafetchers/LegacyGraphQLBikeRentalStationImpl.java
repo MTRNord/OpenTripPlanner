@@ -81,11 +81,6 @@ public class LegacyGraphQLBikeRentalStationImpl implements LegacyGraphQLDataFetc
         return environment -> 0;
     }
 
-    @Override
-    public DataFetcher<VehicleRentalStationUris> rentalUris() {
-        return environment -> getSource(environment).rentalUris;
-    }
-
     private VehicleRentalStation getSource(DataFetchingEnvironment environment) {
         return environment.getSource();
     }

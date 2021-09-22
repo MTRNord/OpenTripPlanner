@@ -3,14 +3,13 @@ package org.opentripplanner.ext.legacygraphqlapi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionResult;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.HeaderParam;
@@ -110,7 +109,7 @@ public class LegacyGraphQLAPI {
                         maxResolves,
                         timeout,
                         locale
-                ).orTimeout(timeout, TimeUnit.MILLISECONDS);
+                );
                 asyncResult.thenAccept(asyncResponse::resume);
             }
         }
@@ -141,45 +140,29 @@ public class LegacyGraphQLAPI {
         x.thenAccept(asyncResponse::resume);
     }
 
-    /*
+
     @POST
     @Path("/batch")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response getGraphQLBatch(
+    public void getGraphQLBatch(
+            @Suspended final AsyncResponse asyncResponse,
             List<HashMap<String, Object>> queries,
             @HeaderParam("OTPTimeout") @DefaultValue("30000") int timeout,
             @HeaderParam("OTPMaxResolves") @DefaultValue("1000000") int maxResolves,
             @Context HttpHeaders headers
     ) {
-        List<Callable<ExecutionResult>> futures = new ArrayList<>();
         Locale locale = headers.getAcceptableLanguages().size() > 0
                 ? headers.getAcceptableLanguages().get(0)
                 : router.defaultRoutingRequest.locale;
 
-        for (HashMap<String, Object> query : queries) {
-            Map<String, Object> variables;
-            if (query.get("variables") instanceof Map) {
-                variables = (Map) query.get("variables");
-            }
-            else if (query.get("variables") instanceof String
-                    && ((String) query.get("variables")).length() > 0) {
-                try {
-                    variables = deserializer.readValue((String) query.get("variables"), Map.class);
-                }
-                catch (IOException e) {
-                    return Response
-                            .status(Response.Status.BAD_REQUEST)
-                            .type(MediaType.TEXT_PLAIN_TYPE)
-                            .entity("Variables must be a valid json object")
-                            .build();
-                }
-            }
-            else {
-                variables = null;
+        Stream<CompletableFuture<ExecutionResult>> futures = queries.stream().map( query ->{
+            Map<String, Object> variables = null;
+            try {
+                variables = getVariables(query);
             }
             String operationName = (String) query.getOrDefault("operationName", null);
 
-            futures.add(LegacyGraphQLIndex.getGraphQLExecutionResult(
+            return LegacyGraphQLIndex.getGraphQLExecutionResult(
                     (String) query.get("query"),
                     router,
                     variables,
@@ -187,19 +170,30 @@ public class LegacyGraphQLAPI {
                     maxResolves,
                     timeout,
                     locale
-            ));
-        }
+            );
+        });
 
-        try {
-            List<Future<ExecutionResult>> results =
-                    LegacyGraphQLIndex.threadPool.invokeAll(futures);
-            return Response.status(Response.Status.OK)
-                    .entity(GraphQLResponseSerializer.serializeBatch(queries, results))
-                    .build();
+        var results = futures.map(CompletableFuture::join).collect(Collectors.toList());
+        var httpResponse = Response.status(Response.Status.OK)
+                .entity(GraphQLResponseSerializer.serializeBatchList(queries, results))
+                .build();
+        asyncResponse.resume(httpResponse);
+
+    }
+
+    private Map<String, Object> getVariables(
+            HashMap<String, Object> query
+    ) throws IOException {
+
+        if (query.get("variables") instanceof Map) {
+            return (Map) query.get("variables");
         }
-        catch (InterruptedException e) {
-            LOG.error("Batch query interrupted", e);
-            throw new RuntimeException(e);
+        else if (query.get("variables") instanceof String
+                && ((String) query.get("variables")).length() > 0) {
+                return deserializer.readValue((String) query.get("variables"), Map.class);
         }
-    }*/
+        else {
+            return null;
+        }
+    }
 }
