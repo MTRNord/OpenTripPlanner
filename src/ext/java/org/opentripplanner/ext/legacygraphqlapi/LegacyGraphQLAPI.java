@@ -2,23 +2,6 @@ package org.opentripplanner.ext.legacygraphqlapi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ExecutionResult;
-import org.opentripplanner.api.json.GraphQLResponseSerializer;
-import org.opentripplanner.standalone.server.OTPServer;
-import org.opentripplanner.standalone.server.Router;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.HeaderParam;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +10,25 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.container.AsyncResponse;
+import javax.ws.rs.container.Suspended;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import org.opentripplanner.api.json.GraphQLResponseSerializer;
+import org.opentripplanner.standalone.server.OTPServer;
+import org.opentripplanner.standalone.server.Router;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 // TODO move to org.opentripplanner.api.resource, this is a Jersey resource class
 
@@ -34,153 +36,170 @@ import java.util.concurrent.Future;
 @Produces(MediaType.APPLICATION_JSON) // One @Produces annotation for all endpoints.
 public class LegacyGraphQLAPI {
 
-  @SuppressWarnings("unused")
-  private static final Logger LOG = LoggerFactory.getLogger(LegacyGraphQLAPI.class);
+    @SuppressWarnings("unused")
+    private static final Logger LOG = LoggerFactory.getLogger(LegacyGraphQLAPI.class);
 
-  private final Router router;
-  private final ObjectMapper deserializer = new ObjectMapper();
+    private final Router router;
+    private final ObjectMapper deserializer = new ObjectMapper();
 
-  /**
-   * @deprecated The support for multiple routers are removed from OTP2.
-   * See https://github.com/opentripplanner/OpenTripPlanner/issues/2760
-   */
-  @Deprecated @PathParam("ignoreRouterId")
-  private String ignoreRouterId;
+    /**
+     * @deprecated The support for multiple routers are removed from OTP2. See
+     * https://github.com/opentripplanner/OpenTripPlanner/issues/2760
+     */
+    @Deprecated
+    @PathParam("ignoreRouterId")
+    private String ignoreRouterId;
 
-  public LegacyGraphQLAPI(@Context OTPServer otpServer) {
-    this.router = otpServer.getRouter();
-  }
-
-  @POST
-  @Path("/")
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Response getGraphQL(
-      HashMap<String, Object> queryParameters,
-      @HeaderParam("OTPTimeout") @DefaultValue("30000") int timeout,
-      @HeaderParam("OTPMaxResolves") @DefaultValue("1000000") int maxResolves,
-      @Context HttpHeaders headers
-  ) {
-    if (queryParameters == null || !queryParameters.containsKey("query")) {
-      LOG.debug("No query found in body");
-      return Response
-          .status(Response.Status.BAD_REQUEST)
-          .type(MediaType.TEXT_PLAIN_TYPE)
-          .entity("No query found in body")
-          .build();
+    public LegacyGraphQLAPI(@Context OTPServer otpServer) {
+        this.router = otpServer.getRouter();
     }
 
-    Locale locale = headers.getAcceptableLanguages().size() > 0
-        ? headers.getAcceptableLanguages().get(0)
-        : router.defaultRoutingRequest.locale;
+    @POST
+    @Path("/")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void getGraphQL(
+            @Suspended final AsyncResponse asyncResponse,
+            HashMap<String, Object> queryParameters,
+            @HeaderParam("OTPTimeout") @DefaultValue("30000") int timeout,
+            @HeaderParam("OTPMaxResolves") @DefaultValue("1000000") int maxResolves,
+            @Context HttpHeaders headers
+    ) {
+        if (queryParameters == null || !queryParameters.containsKey("query")) {
+            LOG.debug("No query found in body");
+            var response = Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .type(MediaType.TEXT_PLAIN_TYPE)
+                    .entity("No query found in body")
+                    .build();
+            asyncResponse.resume(response);
+        }
+        else {
 
-    String query = (String) queryParameters.get("query");
-    Object queryVariables = queryParameters.getOrDefault("variables", null);
-    String operationName = (String) queryParameters.getOrDefault("operationName", null);
-    Map<String, Object> variables;
-    if (queryVariables instanceof Map) {
-      variables = (Map) queryVariables;
+            Locale locale = headers.getAcceptableLanguages().size() > 0
+                    ? headers.getAcceptableLanguages().get(0)
+                    : router.defaultRoutingRequest.locale;
+
+            String query = (String) queryParameters.get("query");
+            Object queryVariables = queryParameters.getOrDefault("variables", null);
+            String operationName = (String) queryParameters.getOrDefault("operationName", null);
+            Map<String, Object> variables;
+            if (queryVariables instanceof Map) {
+                variables = (Map) queryVariables;
+            }
+            else if (queryVariables instanceof String && !((String) queryVariables).isEmpty()) {
+                try {
+                    variables = deserializer.readValue((String) queryVariables, Map.class);
+                }
+                catch (IOException e) {
+                    var response = Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .type(MediaType.TEXT_PLAIN_TYPE)
+                            .entity("Variables must be a valid json object")
+                            .build();
+
+                    asyncResponse.resume(response);
+                }
+            }
+            else {
+                variables = new HashMap<>();
+                var asyncResult = LegacyGraphQLIndex.getGraphQLResponse(
+                        query,
+                        router,
+                        variables,
+                        operationName,
+                        maxResolves,
+                        timeout,
+                        locale
+                ).orTimeout(timeout, TimeUnit.MILLISECONDS);
+                asyncResult.thenAccept(asyncResponse::resume);
+            }
+        }
     }
-    else if (queryVariables instanceof String && !((String) queryVariables).isEmpty()) {
-      try {
-        variables = deserializer.readValue((String) queryVariables, Map.class);
-      }
-      catch (IOException e) {
-        return Response
-            .status(Response.Status.BAD_REQUEST)
-            .type(MediaType.TEXT_PLAIN_TYPE)
-            .entity("Variables must be a valid json object")
-            .build();
-      }
+
+    @POST
+    @Path("/")
+    @Consumes("application/graphql")
+    public void getGraphQL(
+            @Suspended final AsyncResponse asyncResponse,
+            String query,
+            @HeaderParam("OTPTimeout") @DefaultValue("30000") int timeout,
+            @HeaderParam("OTPMaxResolves") @DefaultValue("1000000") int maxResolves,
+            @Context HttpHeaders headers
+    ) {
+        Locale locale = headers.getAcceptableLanguages().size() > 0
+                ? headers.getAcceptableLanguages().get(0)
+                : router.defaultRoutingRequest.locale;
+        var x = LegacyGraphQLIndex.getGraphQLResponse(
+                query,
+                router,
+                null,
+                null,
+                maxResolves,
+                timeout,
+                locale
+        );
+        x.thenAccept(asyncResponse::resume);
     }
-    else {
-      variables = new HashMap<>();
-    }
-    return LegacyGraphQLIndex.getGraphQLResponse(
-        query,
-        router,
-        variables,
-        operationName,
-        maxResolves,
-        timeout,
-        locale
-    );
-  }
 
-  @POST
-  @Path("/")
-  @Consumes("application/graphql")
-  public Response getGraphQL(
-      String query,
-      @HeaderParam("OTPTimeout") @DefaultValue("30000") int timeout,
-      @HeaderParam("OTPMaxResolves") @DefaultValue("1000000") int maxResolves,
-      @Context HttpHeaders headers
-  ) {
-    Locale locale = headers.getAcceptableLanguages().size() > 0
-        ? headers.getAcceptableLanguages().get(0)
-        : router.defaultRoutingRequest.locale;
-    return LegacyGraphQLIndex.getGraphQLResponse(
-        query,
-        router,
-        null,
-        null,
-        maxResolves,
-        timeout,
-        locale);
-  }
+    /*
+    @POST
+    @Path("/batch")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getGraphQLBatch(
+            List<HashMap<String, Object>> queries,
+            @HeaderParam("OTPTimeout") @DefaultValue("30000") int timeout,
+            @HeaderParam("OTPMaxResolves") @DefaultValue("1000000") int maxResolves,
+            @Context HttpHeaders headers
+    ) {
+        List<Callable<ExecutionResult>> futures = new ArrayList<>();
+        Locale locale = headers.getAcceptableLanguages().size() > 0
+                ? headers.getAcceptableLanguages().get(0)
+                : router.defaultRoutingRequest.locale;
 
-  @POST
-  @Path("/batch")
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Response getGraphQLBatch(
-      List<HashMap<String, Object>> queries,
-      @HeaderParam("OTPTimeout") @DefaultValue("30000") int timeout,
-      @HeaderParam("OTPMaxResolves") @DefaultValue("1000000") int maxResolves,
-      @Context HttpHeaders headers
-  ) {
-    List<Callable<ExecutionResult>> futures = new ArrayList<>();
-    Locale locale = headers.getAcceptableLanguages().size() > 0
-        ? headers.getAcceptableLanguages().get(0)
-        : router.defaultRoutingRequest.locale;
+        for (HashMap<String, Object> query : queries) {
+            Map<String, Object> variables;
+            if (query.get("variables") instanceof Map) {
+                variables = (Map) query.get("variables");
+            }
+            else if (query.get("variables") instanceof String
+                    && ((String) query.get("variables")).length() > 0) {
+                try {
+                    variables = deserializer.readValue((String) query.get("variables"), Map.class);
+                }
+                catch (IOException e) {
+                    return Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .type(MediaType.TEXT_PLAIN_TYPE)
+                            .entity("Variables must be a valid json object")
+                            .build();
+                }
+            }
+            else {
+                variables = null;
+            }
+            String operationName = (String) query.getOrDefault("operationName", null);
 
-    for (HashMap<String, Object> query : queries) {
-      Map<String, Object> variables;
-      if (query.get("variables") instanceof Map) {
-        variables = (Map) query.get("variables");
-      }
-      else if (query.get("variables") instanceof String
-          && ((String) query.get("variables")).length() > 0) {
+            futures.add(LegacyGraphQLIndex.getGraphQLExecutionResult(
+                    (String) query.get("query"),
+                    router,
+                    variables,
+                    operationName,
+                    maxResolves,
+                    timeout,
+                    locale
+            ));
+        }
+
         try {
-          variables = deserializer.readValue((String) query.get("variables"), Map.class);
+            List<Future<ExecutionResult>> results =
+                    LegacyGraphQLIndex.threadPool.invokeAll(futures);
+            return Response.status(Response.Status.OK)
+                    .entity(GraphQLResponseSerializer.serializeBatch(queries, results))
+                    .build();
         }
-        catch (IOException e) {
-          return Response
-              .status(Response.Status.BAD_REQUEST)
-              .type(MediaType.TEXT_PLAIN_TYPE)
-              .entity("Variables must be a valid json object")
-              .build();
+        catch (InterruptedException e) {
+            LOG.error("Batch query interrupted", e);
+            throw new RuntimeException(e);
         }
-      }
-      else {
-        variables = null;
-      }
-      String operationName = (String) query.getOrDefault("operationName", null);
-
-      futures.add(() -> LegacyGraphQLIndex.getGraphQLExecutionResult((String) query.get("query"),
-          router,
-          variables,
-          operationName,
-          maxResolves,
-          timeout,
-          locale
-      ));
-    }
-
-    try {
-      List<Future<ExecutionResult>> results = LegacyGraphQLIndex.threadPool.invokeAll(futures);
-      return Response.status(Response.Status.OK).entity(GraphQLResponseSerializer.serializeBatch(queries, results)).build();
-    } catch (InterruptedException e) {
-      LOG.error("Batch query interrupted", e);
-      throw new RuntimeException(e);
-    }
-  }
+    }*/
 }

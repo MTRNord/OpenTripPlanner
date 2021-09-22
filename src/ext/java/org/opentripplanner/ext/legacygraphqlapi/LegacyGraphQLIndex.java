@@ -14,8 +14,9 @@ import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.opentripplanner.api.json.GraphQLResponseSerializer;
-import org.opentripplanner.ext.legacygraphqlapi.datafetchers.*;
 import org.opentripplanner.routing.RoutingService;
 import org.opentripplanner.standalone.server.Router;
 import org.slf4j.Logger;
@@ -29,8 +30,43 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLAgencyImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLAlertImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLBikeParkImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLBikeRentalStationImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLBookingInfoImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLBookingTimeImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLCarParkImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLContactInfoImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLCoordinatesImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLDepartureRowImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLFeedImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLGeometryImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLItineraryImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLLegImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLNodeTypeResolver;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLPatternImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLPlaceImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLPlaceInterfaceTypeResolver;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLPlanImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLQueryTypeImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLRouteImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLStopImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLStoptimeImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLStoptimesInPatternImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLSystemNoticeImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLTranslatedStringImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLTripImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLVehicleParkingImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLdebugOutputImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLelevationProfileComponentImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLfareComponentImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLfareImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLplaceAtDistanceImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLserviceTimeRangeImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLstepImpl;
+import org.opentripplanner.ext.legacygraphqlapi.datafetchers.LegacyGraphQLstopAtDistanceImpl;
 
 class LegacyGraphQLIndex {
 
@@ -97,7 +133,7 @@ class LegacyGraphQLIndex {
     return null;
   }
 
-  static ExecutionResult getGraphQLExecutionResult(
+  static CompletableFuture<ExecutionResult> getGraphQLExecutionResult(
       String query, Router router, Map<String, Object> variables, String operationName,
       int maxResolves, int timeoutMs, Locale locale
   ) {
@@ -123,18 +159,17 @@ class LegacyGraphQLIndex {
         .variables(variables)
         .locale(locale)
         .build();
-    try {
-      return graphQL.executeAsync(executionInput).get(timeoutMs, TimeUnit.MILLISECONDS);
+      return graphQL.executeAsync(executionInput).orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
     } catch (InterruptedException | ExecutionException | TimeoutException e) {
-      return new AbortExecutionException(e).toExecutionResult();
+      new AbortExecutionException(e).toExecutionResult();
     }
   }
 
-  static Response getGraphQLResponse(
+  static CompletableFuture<Response> getGraphQLResponse(
       String query, Router router, Map<String, Object> variables, String operationName,
       int maxResolves, int timeoutMs, Locale locale
   ) {
-    ExecutionResult executionResult = getGraphQLExecutionResult(
+    CompletableFuture<ExecutionResult> executionResult = getGraphQLExecutionResult(
         query,
         router,
         variables,
@@ -144,6 +179,9 @@ class LegacyGraphQLIndex {
         locale
     );
 
-    return Response.status(Response.Status.OK).entity(GraphQLResponseSerializer.serialize(executionResult)).build();
+    return executionResult.thenApply(r ->
+            Response.status(Response.Status.OK).entity(GraphQLResponseSerializer.serialize(r)).build()
+    );
+
   }
 }

@@ -583,7 +583,12 @@ public class LegacyGraphQLQueryTypeImpl
   }
 
   @Override
-  public DataFetcher<RoutingResponse> plan() {
+  public DataFetcher plan() {
+    var x = foo();
+    return graphql.schema.AsyncDataFetcher.async(x);
+  }
+
+  private DataFetcher<RoutingResponse> foo() {
     return environment -> {
       LegacyGraphQLRequestContext context = environment.<LegacyGraphQLRequestContext>getContext();
       RoutingRequest request = context.getRouter().defaultRoutingRequest.clone();
