@@ -76,7 +76,7 @@ public class TripPatternForDates
 
     @Override
     public boolean boardingPossibleAt(int stopPositionInPattern) {
-        return tripPattern.getPattern().canBoard(stopPositionInPattern);
+        return tripPattern.getPattern().canBoardWithBicycle(stopPositionInPattern);
     }
 
     @Override

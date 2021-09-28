@@ -1,6 +1,7 @@
 /* This file is based on code copied from project OneBusAway, see the LICENSE file for further information. */
 package org.opentripplanner.model;
 
+import java.time.LocalTime;
 import org.opentripplanner.util.time.TimeUtils;
 
 
@@ -290,6 +291,25 @@ public final class StopTime implements Comparable<StopTime> {
 
     public void cancelPickup() {
         pickupType = PickDrop.CANCELLED;
+    }
+
+    public boolean canBoardWithBicycle() {
+        return checkIfInsideTimePeriod(arrivalTime);
+    }
+
+    public boolean canAlightWithBicycle() {
+        return checkIfInsideTimePeriod(departureTime);
+    }
+
+    private boolean checkIfInsideTimePeriod(int secondsSinceMidnight) {
+        if(secondsSinceMidnight != MISSING_VALUE) {
+            var sevenOClock = LocalTime.of(7, 0);
+            var tenOClock = LocalTime.of(10, 0);
+            var localTime = LocalTime.ofSecondOfDay(secondsSinceMidnight % 86400);
+            return localTime.isBefore(sevenOClock) && localTime.isAfter(tenOClock);
+        } else {
+            return false;
+        }
     }
 
     @Override

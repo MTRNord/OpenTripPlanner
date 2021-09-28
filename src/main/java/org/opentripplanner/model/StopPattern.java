@@ -40,11 +40,15 @@ public class StopPattern implements Serializable {
     private final Stop[] stops;
     private final PickDrop[]  pickups;
     private final PickDrop[]  dropoffs;
+    private final boolean[] canBoardWithBicyle;
+    private final boolean[] canAlightWithBicyle;
 
     private StopPattern (int size) {
         stops     = new Stop[size];
         pickups   = new PickDrop[size];
         dropoffs  = new PickDrop[size];
+        canBoardWithBicyle = new boolean[size];
+        canAlightWithBicyle = new boolean[size];
     }
 
     /** Assumes that stopTimes are already sorted by time. */
@@ -61,6 +65,9 @@ public class StopPattern implements Serializable {
             // pick/drop messages could be stored in individual trips
             pickups[i] = stopTime.getPickupType();
             dropoffs[i] = stopTime.getDropOffType();
+
+            canBoardWithBicyle[i] = stopTime.canBoardWithBicycle();
+            canAlightWithBicyle[i] = stopTime.canAlightWithBicycle();
         }
         /*
          * TriMet GTFS has many trips that differ only in the pick/drop status of their initial and
@@ -153,6 +160,10 @@ public class StopPattern implements Serializable {
 
     public PickDrop getPickup(int i) {
         return pickups[i];
+    }
+
+    public boolean canBoardWithBicycle(int i) {
+        return canBoardWithBicyle[i];
     }
 
     public PickDrop getDropoff(int i) {

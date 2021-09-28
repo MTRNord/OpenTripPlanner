@@ -7,6 +7,8 @@ import org.opentripplanner.model.TripPattern;
 import org.opentripplanner.routing.RoutingService;
 import org.opentripplanner.routing.algorithm.astar.TraverseVisitor;
 import org.opentripplanner.routing.algorithm.astar.strategies.SkipEdgeStrategy;
+import org.opentripplanner.routing.api.request.StreetMode;
+import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.vehicle_rental.VehicleRentalStation;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.graph.Edge;
@@ -100,7 +102,7 @@ public class PlaceFinderTraverseVisitor implements TraverseVisitor {
     if (vertex instanceof TransitStopVertex) {
       Stop stop = ((TransitStopVertex) vertex).getStop();
       handleStop(stop, distance);
-      handlePatternsAtStop(stop, distance);
+      handlePatternsAtStop(stop, distance, state.getBackMode());
     }
     else if (vertex instanceof VehicleRentalStationVertex) {
       handleBikeRentalStation(((VehicleRentalStationVertex) vertex).getStation(), distance);
@@ -117,7 +119,7 @@ public class PlaceFinderTraverseVisitor implements TraverseVisitor {
     }
   }
 
-  private void handlePatternsAtStop(Stop stop, double distance) {
+  private void handlePatternsAtStop(Stop stop, double distance, TraverseMode mode) {
     if (includePatternAtStops) {
       List<TripPattern> patterns = routingService
           .getPatternsForStop(stop)
@@ -126,6 +128,13 @@ public class PlaceFinderTraverseVisitor implements TraverseVisitor {
           .filter(pattern -> filterByRoutes == null
               || filterByRoutes.contains(pattern.getRoute().getId()))
           .filter(pattern -> pattern.canBoard(pattern.getStopIndex(stop)))
+          .filter(pattern -> {
+             if(mode.isCycling()) {
+               return pattern.canBoardWithBicycle(pattern.getStopIndex(stop));
+             } else {
+               return true;
+             }
+          })
           .collect(toList());
 
       for (TripPattern pattern : patterns) {
