@@ -14,4 +14,7 @@ public class NorwayIntersectionTraversalCostModel extends SimpleIntersectionTrav
   public double getExpectedStraightNoLightTimeSec() {
     return 0.0;
   }
+
+  @Override
+  public double getExpectedStraightAtLightTimeSec() { return 5.0; }
 }
