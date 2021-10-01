@@ -294,19 +294,19 @@ public final class StopTime implements Comparable<StopTime> {
     }
 
     public boolean canBoardWithBicycle() {
-        return checkIfInsideTimePeriod(arrivalTime);
+        return !isInsideBannedTimePeriod(arrivalTime);
     }
 
     public boolean canAlightWithBicycle() {
-        return checkIfInsideTimePeriod(departureTime);
+        return !isInsideBannedTimePeriod(departureTime);
     }
 
-    private boolean checkIfInsideTimePeriod(int secondsSinceMidnight) {
+    private boolean isInsideBannedTimePeriod(int secondsSinceMidnight) {
         if(secondsSinceMidnight != MISSING_VALUE) {
             var sevenOClock = LocalTime.of(7, 0);
             var tenOClock = LocalTime.of(10, 0);
             var localTime = LocalTime.ofSecondOfDay(secondsSinceMidnight % 86400);
-            return localTime.isBefore(sevenOClock) && localTime.isAfter(tenOClock);
+            return localTime.isAfter(sevenOClock) && localTime.isBefore(tenOClock);
         } else {
             return false;
         }
