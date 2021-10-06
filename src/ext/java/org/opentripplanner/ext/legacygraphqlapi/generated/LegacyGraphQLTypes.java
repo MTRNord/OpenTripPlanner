@@ -987,7 +987,7 @@ public class LegacyGraphQLTypes {
     private Iterable<String> _bannedVehicleParkingTags;
     private Iterable<String> _requiredVehicleParkingTags;
     private Iterable<String> _preferredVehicleParkingTags;
-    private Float _unpreferredVehicleParkingTagPenalty;
+    private Double _unpreferredVehicleParkingTagPenalty;
     private Boolean _useVehicleParkingAvailabilityInformation;
   
     public LegacyGraphQLQueryTypePlanArgs(Map<String, Object> args) {
@@ -1062,7 +1062,7 @@ public class LegacyGraphQLTypes {
         this._bannedBikeRentalNetworks = (Iterable<String>) args.get("bannedBikeRentalNetworks");
         this._bannedVehicleParkingTags = (Iterable<String>) args.get("bannedVehicleParkingTags");
         this._preferredVehicleParkingTags = (Iterable<String>) args.get("preferredVehicleParkingTags");
-        this._unpreferredVehicleParkingTagPenalty = (Float) args.get("unpreferredVehicleParkingTagPenalty");
+        this._unpreferredVehicleParkingTagPenalty = (Double) args.get("unpreferredVehicleParkingTagPenalty");
         this._requiredVehicleParkingTags = (Iterable<String>) args.get("requiredVehicleParkingTags");
         this._useVehicleParkingAvailabilityInformation = (Boolean) args.get("useVehicleParkingAvailabilityInformation");
       }
