@@ -1,17 +1,17 @@
 package org.opentripplanner.graph_builder.module.osm;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.net.URLDecoder;
-
 import gnu.trove.list.TLongList;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.opentripplanner.graph_builder.DataImportIssueStore;
 import org.opentripplanner.openstreetmap.BinaryOpenStreetMapProvider;
 import org.opentripplanner.openstreetmap.model.OSMNode;
 import org.opentripplanner.openstreetmap.model.OSMWay;
+
+import java.io.File;
+import java.net.URLDecoder;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OpenStreetMapParserTest {
 
@@ -46,5 +46,18 @@ public class OpenStreetMapParserTest {
         assertTrue(wayA.hasTag("highway"));
         assertEquals("Potlatch 0.9a", wayA.getTag("created_by"));
         assertEquals("secondary", wayA.getTag("highway"));
+    }
+
+    @Test
+    public void testBicycleParkingInMultipolygon() {
+        var provider = new BinaryOpenStreetMapProvider(
+                new File("src/test/resources/germany/herzberg-multipolygon-bicycle-parking.osm.pbf"), true);
+        OSMDatabase osmdb = new OSMDatabase(new DataImportIssueStore(false));
+
+        provider.readOSM(osmdb);
+
+        assertEquals(384, osmdb.nodeCount());
+        assertEquals(1, osmdb.getBikeParkingAreas().size());
+        System.out.println(osmdb.getBikeParkingAreas());
     }
 }

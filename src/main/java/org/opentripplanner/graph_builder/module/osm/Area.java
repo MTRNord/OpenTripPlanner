@@ -25,6 +25,15 @@ import org.locationtech.jts.geom.Polygon;
  */
 class Area {
 
+    @Override
+    public String toString() {
+        return "Area{" +
+                "parent=" + parent +
+                ", outermostRings=" + outermostRings +
+                ", jtsMultiPolygon=" + jtsMultiPolygon +
+                '}';
+    }
+
     public static class AreaConstructionException extends RuntimeException {
         private static final long serialVersionUID = 1L;
     }
