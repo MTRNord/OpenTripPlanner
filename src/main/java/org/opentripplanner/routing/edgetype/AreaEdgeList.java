@@ -79,6 +79,12 @@ public class AreaEdgeList implements Serializable {
         @SuppressWarnings("unchecked")
         HashSet<IntersectionVertex> verticesCopy = (HashSet<IntersectionVertex>) vertices.clone();
         VERTEX: for (IntersectionVertex v : verticesCopy) {
+            if (v == null || newVertex == null) {
+                continue VERTEX;
+            }
+            if (v.getCoordinate() == null || newVertex.getCoordinate() == null) {
+                continue VERTEX;
+            }
             LineString newGeometry = geometryFactory.createLineString(new Coordinate[] {
                     newVertex.getCoordinate(), v.getCoordinate() });
 
